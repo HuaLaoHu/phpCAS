@@ -314,12 +314,13 @@ class CAS_Client
      */
     private function _getServerBaseURL()
     {
-        // the URL is build only when needed
         if ( empty($this->_server['base_url']) ) {
-            $this->_server['base_url'] = 'https://' . $this->_getServerHostname();
-            if ($this->_getServerPort()!=443) {
+
+
+            $this->_server['base_url'] = $this->_getServerHostname();
+            if ( (preg_match('/^https:/', $this->_getServerHostname()) && $this->_getServerPort()!= 443) || (preg_match('/^http:/', $this->_getServerHostname()) && $this->_getServerPort()!= 80)) {
                 $this->_server['base_url'] .= ':'
-                .$this->_getServerPort();
+                    .$this->_getServerPort();
             }
             $this->_server['base_url'] .= $this->_getServerURI();
         }
@@ -939,6 +940,7 @@ class CAS_Client
         if (!$this->_isLogoutRequest()) {
             if (session_id() === "") {
                 // skip Session Handling for logout requests and if don't want it
+                session_save_path(config('session.files'));
                 session_start();
                 phpCAS :: trace("Starting a new session " . session_id());
             }
@@ -3912,14 +3914,16 @@ class CAS_Client
     {
         phpCAS::traceBegin();
         // the URL is built when needed only
+
         if ( empty($this->_url) ) {
             // remove the ticket if present in the URL
-            $final_uri = ($this->_isHttps()) ? 'https' : 'http';
-            $final_uri .= '://';
+            //$final_uri = ($this->_isHttps()) ? 'https' : 'http';
+            //$final_uri .= '://';
 
-            $final_uri .= $this->_getClientUrl();
-            $request_uri = explode('?', $_SERVER['REQUEST_URI'], 2);
-            $final_uri .= $request_uri[0];
+            //$final_uri = $this->_getClientUrl();
+            //dd($final_uri);
+            $request_uri    = explode('?', $_SERVER['APP_URL'] . $_SERVER['REQUEST_URI'], 2);
+            $final_uri        = $request_uri[0];
 
             if (isset($request_uri[1]) && $request_uri[1]) {
                 $query_string= $this->_removeParameterFromQueryString('ticket', $request_uri[1]);
@@ -3927,13 +3931,14 @@ class CAS_Client
                 // If the query string still has anything left,
                 // append it to the final URI
                 if ($query_string !== '') {
-                    $final_uri .= "?$query_string";
+                    $final_uri    .= "?$query_string";
                 }
             }
 
             phpCAS::trace("Final URI: $final_uri");
             $this->setURL($final_uri);
         }
+
         phpCAS::traceEnd($this->_url);
         return $this->_url;
     }
